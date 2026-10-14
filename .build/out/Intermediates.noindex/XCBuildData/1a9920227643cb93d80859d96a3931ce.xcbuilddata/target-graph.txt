@@ -1,0 +1,9 @@
+Target dependency graph (4 targets)
+Target 'AllExcludingTests' in project 'Aggregate'
+➜ Explicit dependency on target 'WordShelf-product' in project 'WordShelf'
+➜ Explicit dependency on target 'WordShelf_WordShelf' in project 'WordShelf'
+Target 'WordShelf-product' in project 'WordShelf'
+➜ Explicit dependency on target 'WordShelf_WordShelf' in project 'WordShelf'
+➜ Explicit dependency on target 'CSQLite' in project 'WordShelf'
+Target 'CSQLite' in project 'WordShelf' (no dependencies)
+Target 'WordShelf_WordShelf' in project 'WordShelf' (no dependencies)

@@ -1,0 +1,31 @@
+{
+  "" : {
+    "const-values" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/WordShelf-primary.swiftconstvalues",
+    "dependencies" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/WordShelf-primary.d",
+    "diagnostics" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/WordShelf-primary.dia",
+    "emit-module-dependencies" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/WordShelf-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/WordShelf-primary-emit-module.dia",
+    "pch" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/WordShelf-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/WordShelf-primary.swiftdeps"
+  },
+  "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/Sources/WordShelf/Accessibility.swift" : {
+    "index-unit-output-path" : "/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/Accessibility.o",
+    "llvm-bc" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/Accessibility.bc",
+    "object" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/Accessibility.o"
+  },
+  "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/Sources/WordShelf/App.swift" : {
+    "index-unit-output-path" : "/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/App.o",
+    "llvm-bc" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/App.bc",
+    "object" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/App.o"
+  },
+  "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/Sources/WordShelf/HotKey.swift" : {
+    "index-unit-output-path" : "/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/HotKey.o",
+    "llvm-bc" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/HotKey.bc",
+    "object" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/HotKey.o"
+  },
+  "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/Sources/WordShelf/Store.swift" : {
+    "index-unit-output-path" : "/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/Store.o",
+    "llvm-bc" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/Store.bc",
+    "object" : "/Users/leiquan/Documents/Codex/2026-10-15/referenced-chatgpt-conversation-this-is-an-2/outputs/WordShelf/.build/out/Intermediates.noindex/WordShelf.build/Release/WordShelf-p.build/Objects-normal/arm64/Store.o"
+  }
+}

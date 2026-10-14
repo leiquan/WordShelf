@@ -6,7 +6,7 @@
 
 ## 打开与构建
 
-用 Xcode 打开本目录或 Package.swift，选择 WordShelf scheme。运行需要 macOS 12 Monterey 或更新版本，支持 Intel 与 Apple 芯片。源码构建需要安装 Xcode。构建脚本同时生成 arm64 和 x86_64 通用程序。
+用 Xcode 打开本目录或 Package.swift，选择 WordShelf scheme。当前 0.5.2 运行需要 macOS 26 或更新版本，仅打包 Apple 芯片 arm64。源码构建需要安装 Xcode。旧兼容版本的说明保留在下方版本历史中。
 
 ```sh
 bash build-app.sh
@@ -131,3 +131,9 @@ CSV 表头为“已查单词,中文含义”，包含全部记录和手动含义
 ## 0.5.1：销毁清单窗口并隐藏 Dock
 
 点击叉号先保存编辑草稿，再移除窗口的 SwiftUI 内容、释放清单窗口引用，并切换为 accessory 模式，使 Dock 图标隐藏。Model 与鼠标监听器由应用代理继续持有，菜单栏保持运行。菜单栏“显示清单”切回 regular 模式并创建新窗口；重复点击复用当前打开的窗口。保存失败时取消关闭，保留草稿。
+
+## 0.5.2：撤回旧系统兼容实现
+
+恢复 SwiftUI Window、MenuBarExtra 和 openWindow，不再手动创建 NSHostingView / NSWindow 或管理 NSStatusItem。最低系统 macOS 26，仅构建 arm64。关闭清单时提交编辑草稿并切换为 accessory 模式隐藏 Dock，Model 与监听器继续由 App 持有；菜单栏重新打开时恢复 regular 模式。
+
+构建、签名检查及 6 项回归测试通过；实际交互流畅度仍需实机确认，不能据此认定卡顿原因已找到或排除。

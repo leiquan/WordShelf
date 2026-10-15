@@ -19,9 +19,9 @@ final class Store {
         guard sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS words(word TEXT PRIMARY KEY,count INTEGER NOT NULL,first REAL NOT NULL,last REAL NOT NULL,source TEXT NOT NULL,meaning TEXT NOT NULL DEFAULT '')", nil, nil, nil) == SQLITE_OK else { throw failure() }
     }
     deinit { sqlite3_close(db) }
-    private func failure() -> NSError { NSError(domain: "SQLite", code: 1, userInfo: [NSLocalizedDescriptionKey: db.map { String(cString: sqlite3_errmsg($0)) } ?? "Cannot open database"]) }
+    private func failure() -> NSError { NSError(domain: "SQLite", code: 1, userInfo: [NSLocalizedDescriptionKey: db.map { String(cString: sqlite3_errmsg($0)) } ?? "无法打开本地数据库"]) }
     func save(_ input: String) throws {
-        guard let word = WordRules.normalize(input) else { throw NSError(domain: "WordShelf", code: 2, userInfo: [NSLocalizedDescriptionKey: "不是单个英文单词，未保存。"] ) }
+        guard let word = WordRules.normalize(input) else { throw NSError(domain: "WordShelf", code: 2, userInfo: [NSLocalizedDescriptionKey: "仅支持记录单个英文单词"] ) }
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, "INSERT OR IGNORE INTO words(word,count,first,last,source) VALUES(?,1,?,?, 'Look Up')", -1, &stmt, nil) == SQLITE_OK else { throw failure() }
         defer { sqlite3_finalize(stmt) }
@@ -45,7 +45,7 @@ final class Store {
         func field(_ text: String) -> String { "\"" + text.replacingOccurrences(of: "\"", with: "\"\"") + "\"" }
         let rows = try all()
         let lines = rows.map { [field($0.text), field($0.meaning)].joined(separator: ",") }
-        return "已查单词,中文含义\r\n" + (lines.isEmpty ? "" : lines.joined(separator: "\r\n") + "\r\n")
+        return "单词,中文含义\r\n" + (lines.isEmpty ? "" : lines.joined(separator: "\r\n") + "\r\n")
     }
     func all() throws -> [Word] {
         var stmt: OpaquePointer?

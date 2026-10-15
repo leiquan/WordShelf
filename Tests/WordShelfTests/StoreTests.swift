@@ -18,11 +18,11 @@ final class StoreTests: XCTestCase {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: folder) }
         let store = try Store(url: folder.appendingPathComponent("words.sqlite"))
-        XCTAssertEqual(try store.exportCSV(), "已查单词,中文含义\r\n")
+        XCTAssertEqual(try store.exportCSV(), "单词,中文含义\r\n")
         try store.save("Apple"); try store.save("apple"); try store.save("don't")
         let csv = try store.exportCSV()
         let rows = csv.components(separatedBy: "\r\n")
-        XCTAssertEqual(rows.first, "已查单词,中文含义")
+        XCTAssertEqual(rows.first, "单词,中文含义")
         XCTAssertEqual(rows.last, "")
         XCTAssertEqual(Set(rows.dropFirst().dropLast()), ["\"apple\",\"\"", "\"don't\",\"\""])
         XCTAssertEqual(try store.all().count, 2)
@@ -42,7 +42,7 @@ final class StoreTests: XCTestCase {
         try reopened.save("APPLE")
         XCTAssertEqual(try reopened.all().count, 1)
         XCTAssertEqual(try reopened.all().first?.meaning, value)
-        XCTAssertEqual(try reopened.exportCSV(), "已查单词,中文含义\r\n\"apple\",\"苹果, \"\"水果\"\"\n第二行\"\r\n")
+        XCTAssertEqual(try reopened.exportCSV(), "单词,中文含义\r\n\"apple\",\"苹果, \"\"水果\"\"\n第二行\"\r\n")
         try reopened.setMeaning("apple", value: "")
         XCTAssertEqual(try reopened.all().first?.meaning, "")
     }
@@ -55,7 +55,7 @@ final class StoreTests: XCTestCase {
         try store!.save("pear"); try store!.clearAll(); store = nil
         let reopened = try Store(url: url)
         XCTAssertTrue(try reopened.all().isEmpty)
-        XCTAssertEqual(try reopened.exportCSV(), "已查单词,中文含义\r\n")
+        XCTAssertEqual(try reopened.exportCSV(), "单词,中文含义\r\n")
         try reopened.save("apple")
         XCTAssertEqual(try reopened.all().count, 1)
         XCTAssertEqual(try reopened.all().first?.meaning, "")

@@ -35,7 +35,7 @@ enum MenuIcon {
             return true
         }
         image.isTemplate = true
-        image.accessibilityDescription = "WordShelf 单词收藏"
+        image.accessibilityDescription = "WordShelf 单词清单"
         return image
     }()
 }

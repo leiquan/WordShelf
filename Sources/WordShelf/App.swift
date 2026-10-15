@@ -19,7 +19,7 @@ final class Model: ObservableObject {
         }
         let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("WordShelf")
         do { store = try Store(url: folder.appendingPathComponent("words.sqlite")) }
-        catch { store = nil; status = "清单无法打开：\(error.localizedDescription)" }
+        catch { store = nil; status = "无法打开单词清单：\(error.localizedDescription)" }
         reload()
         collector.onPermission = { [weak self] trusted in
             guard let self else { return }
@@ -31,12 +31,12 @@ final class Model: ObservableObject {
         }
         collector.onWord = { [weak self] word in
             guard let self, let store = self.store else { return }
-            do { try store.save(word); self.reload(); self.status = "已加入清单：\(word)" }
-            catch { self.status = "保存失败：\(error.localizedDescription)" }
+            do { try store.save(word); self.reload(); self.status = "已记录：\(word)" }
+            catch { self.status = "单词保存失败：\(error.localizedDescription)" }
         }
         collector.start()
     }
-    func reload() { do { words = try store?.all() ?? [] } catch { status = error.localizedDescription } }
+    func reload() { do { words = try store?.all() ?? [] } catch { status = "无法读取单词清单：\(error.localizedDescription)" } }
     func stageMeaning(_ word: String, value: String) { drafts[word] = value }
     func saveMeaning(_ word: String, value: String) {
         drafts[word] = value
@@ -54,19 +54,19 @@ final class Model: ObservableObject {
         guard let store, !words.isEmpty else { return }
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "清空所有单词？"
-        alert.informativeText = "将删除全部已查单词及中文含义。建议先导出 CSV，此操作无法撤销。"
+        alert.messageText = "清空单词清单？"
+        alert.informativeText = "将删除所有单词及中文含义，此操作无法撤销。如需保留，请先导出 CSV。"
         alert.addButton(withTitle: "取消")
         alert.addButton(withTitle: "清空单词")
         guard alert.runModal() == .alertSecondButtonReturn else { return }
         do {
             try store.clearAll()
-            drafts.removeAll(); reload(); status = "已清空单词清单"
-        } catch { status = "清空失败：\(error.localizedDescription)" }
+            drafts.removeAll(); reload(); status = "单词清单已清空"
+        } catch { status = "单词清单清空失败：\(error.localizedDescription)" }
     }
     func exportCSV() {
         guard commitDrafts() else { return }
-        guard let store else { status = "清单不可用，无法导出。"; return }
+        guard let store else { status = "无法导出，单词清单不可用"; return }
         let panel = NSSavePanel()
         panel.title = "导出单词清单"
         panel.allowedContentTypes = [.commaSeparatedText]
@@ -76,7 +76,7 @@ final class Model: ObservableObject {
             let csv = try store.exportCSV()
             try csv.write(to: url, atomically: true, encoding: .utf8)
             status = "已导出：\(url.lastPathComponent)"
-        } catch { status = "导出失败：\(error.localizedDescription)" }
+        } catch { status = "单词清单导出失败：\(error.localizedDescription)" }
     }
     func permission() {
         _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
@@ -88,15 +88,15 @@ final class Model: ObservableObject {
         let alert = NSAlert()
         if authorized {
             alert.alertStyle = collector.isMonitoring ? .informational : .warning
-            alert.messageText = collector.isMonitoring ? "辅助功能已授权" : "已授权，但监听未启动"
+            alert.messageText = collector.isMonitoring ? "辅助功能已授权" : "已获授权，但单词记录未启动"
             alert.informativeText = collector.isMonitoring
-                ? "正在监听右键 Look Up，可以开始查词。"
-                : "请退出 WordShelf 后重新打开，再检查权限。"
-            alert.addButton(withTitle: "知道了")
+                ? "单词记录已启用。"
+                : "请退出并重新打开 WordShelf，然后检查权限。"
+            alert.addButton(withTitle: "好")
             alert.runModal()
         } else {
             alert.alertStyle = .warning
-            alert.messageText = "暂无权限，无法记录"
+            alert.messageText = "未获辅助功能授权，无法记录单词"
             alert.informativeText = ""
             alert.addButton(withTitle: "打开辅助功能设置")
             alert.addButton(withTitle: "取消")
@@ -105,8 +105,8 @@ final class Model: ObservableObject {
                 if !NSWorkspace.shared.open(url) {
                     let failure = NSAlert()
                     failure.messageText = "无法打开辅助功能设置"
-                    failure.informativeText = "请手动打开系统设置 → 隐私与安全性 → 辅助功能。"
-                    failure.addButton(withTitle: "知道了")
+                    failure.informativeText = "请前往“系统设置”→“隐私与安全性”→“辅助功能”。"
+                    failure.addButton(withTitle: "好")
                     failure.runModal()
                 }
             }
@@ -118,7 +118,7 @@ final class Model: ObservableObject {
     @StateObject private var model = Model()
     @NSApplicationDelegateAdaptor(ShelfDelegate.self) private var delegate
     var body: some Scene {
-        Window("WordShelf 查词记录", id: "word-list") {
+        Window("WordShelf", id: "word-list") {
             ShelfView(model: model)
                 .onAppear {
                     delegate.model = model
@@ -142,14 +142,14 @@ private struct ShelfMenu: View {
     @Environment(\.openWindow) private var openWindow
     var body: some View {
         Text(model.status)
-        Button("显示清单") {
+        Button("显示单词清单") {
             NSApp.setActivationPolicy(.regular)
             openWindow(id: "word-list")
             NSApp.activate(ignoringOtherApps: true)
         }
         Button("关于 WordShelf") { showAbout() }
         Divider()
-        Button("退出") { NSApp.terminate(nil) }
+        Button("退出 WordShelf") { NSApp.terminate(nil) }
     }
 }
 
@@ -160,27 +160,27 @@ private struct ShelfView: View {
                 HStack {
                     Text("单词清单").font(.title2.bold())
                     Spacer()
-                    Text("单词数量：\(model.words.count)个")
+                    Text("共 \(model.words.count) 个单词")
                     Button("清空单词") { model.clearWords() }.disabled(model.words.isEmpty || model.store == nil)
                     Button("导出 CSV") { model.exportCSV() }.disabled(model.words.isEmpty || model.store == nil)
                 }
-                Text("右键单词 → 点击 Look Up → 自动加入清单 → 手动填写含义").font(.callout)
+                Text("右键点击英文单词，选择“Look Up／查询”后自动记录。中文含义可手动填写。").font(.callout)
                 Text(model.status).foregroundStyle(.secondary).textSelection(.enabled)
                 if !model.authorized {
                     HStack {
-                        Button("允许辅助功能访问") { model.permission() }
-                        Button("显示这版 App") { model.revealApp() }
-                        Button("重新检查权限") { model.checkPermissionWithFeedback() }
+                        Button("授权辅助功能访问") { model.permission() }
+                        Button("在 Finder 中显示当前 App") { model.revealApp() }
+                        Button("检查权限") { model.checkPermissionWithFeedback() }
                     }
-                    Text("正在运行：\(Bundle.main.bundleURL.path)")
+                    Text("当前 App：\(Bundle.main.bundleURL.path)")
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
                 HStack {
-                    Text("已查单词").frame(width: 170, alignment: .leading)
+                    Text("单词").frame(width: 170, alignment: .leading)
                     Text("中文含义").frame(maxWidth: .infinity, alignment: .leading)
                 }.font(.headline).padding(.horizontal, 12)
                 if model.words.isEmpty {
-                    Text("目前暂无单词，去查一个试试~")
+                    Text("暂无单词")
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -230,7 +230,7 @@ private struct MeaningCell: View {
                 TextField("输入中文含义", text: $draft)
                     .textFieldStyle(.roundedBorder)
                     .focused($focused)
-                    .accessibilityLabel("中文含义：\(word.text)")
+                    .accessibilityLabel("\(word.text)的中文含义")
                     .onSubmit { commit(); focused = false }
             } else {
                 Text(word.meaning.isEmpty ? "—" : word.meaning)
@@ -254,6 +254,6 @@ private func showAbout() {
     NSApp.activate(ignoringOtherApps: true)
     NSApp.orderFrontStandardAboutPanel(options: [
         .applicationName: "WordShelf",
-        .credits: NSAttributedString(string: "Auther：leiquan@live.com")
+        .credits: NSAttributedString(string: "作者：leiquan@live.com")
     ])
 }

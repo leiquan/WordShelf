@@ -39,12 +39,12 @@ final class LookupCollector {
         guard trusted else {
             if let monitor { NSEvent.removeMonitor(monitor) }
             monitor = nil; pending = nil; contextPID = nil
-            onStatus?("暂无权限，无法记录")
+            onStatus?("未获辅助功能授权，无法记录单词")
             return
         }
         guard monitor == nil else { return }
         monitor = NSEvent.addGlobalMonitorForEvents(matching: [.rightMouseDown, .leftMouseDown, .leftMouseUp]) { [weak self] event in self?.handle(event) }
-        onStatus?(monitor == nil ? "无法监听鼠标点击，请重新启动 App" : "正在监听：右键单词 → 点击 Look Up")
+        onStatus?(monitor == nil ? "无法启动单词记录，请重新打开 WordShelf" : "单词记录已启用")
     }
     private func handle(_ event: NSEvent) {
         guard AXIsProcessTrusted() else { pending = nil; return }

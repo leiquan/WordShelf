@@ -1,5 +1,7 @@
 # WordShelf：右键 Look Up 后加入清单
 
+功能和界面说明Wiki ：https://github.com/leiquan/WordShelf/wiki/WordShelf-查词记录工具%E2%80%90%E2%80%90%E2%80%90introduction-简介
+
 主要功能：在其他 App 右键英文单词，再用鼠标点击系统 **Look Up / 查询** 菜单项后，将该词加入本地清单。重复词只保留一条。
 
 已移除快捷键查词、手工输入、剪贴板收藏、释义、次数显示、Anki 导出及诊断面板。清单界面支持查看已保存单词与导出 CSV；菜单栏提供显示清单和退出入口。

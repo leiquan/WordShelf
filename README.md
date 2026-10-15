@@ -1,4 +1,4 @@
-# WordShelf：右键 Look Up 后加入清单
+# WordShelf：右键 Look Up英语单词后，加入清单
 
 功能和界面说明Wiki ：https://github.com/leiquan/WordShelf/wiki/WordShelf-查词记录工具%E2%80%90%E2%80%90%E2%80%90introduction-简介
 

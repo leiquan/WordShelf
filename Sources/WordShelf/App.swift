@@ -268,7 +268,7 @@ private struct ShelfView: View {
                     Button("清空单词") { model.clearWords() }.disabled(model.words.isEmpty || model.store == nil)
                     Button("导出 CSV") { model.exportCSV() }.disabled(model.words.isEmpty || model.store == nil)
                 }
-                Text("右键点击英文单词，选择“Look Up／查询”后自动记录。中文含义可手动填写。").font(.callout)
+                Text("选择英文单词并右键，选择“Look Up／查询”后自动记录该词；设置密钥可查询并显示音标；中文含义可自行手动填写。").font(.callout)
                 Text(model.status).foregroundStyle(.secondary).textSelection(.enabled)
                 if !model.authorized {
                     HStack {

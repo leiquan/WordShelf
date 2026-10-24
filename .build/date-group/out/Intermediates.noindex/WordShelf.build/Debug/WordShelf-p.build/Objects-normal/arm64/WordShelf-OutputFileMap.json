@@ -1,0 +1,89 @@
+{
+  "" : {
+    "diagnostics" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/WordShelf-primary.dia",
+    "emit-module-dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/WordShelf-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/WordShelf-primary-emit-module.dia",
+    "pch" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/WordShelf-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/WordShelf-primary.swiftdeps"
+  },
+  "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/DerivedSources/resource_bundle_accessor.swift" : {
+    "const-values" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/resource_bundle_accessor.swiftconstvalues",
+    "dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/resource_bundle_accessor.d",
+    "diagnostics" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/resource_bundle_accessor.dia",
+    "index-unit-output-path" : "/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/resource_bundle_accessor.o",
+    "llvm-bc" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/resource_bundle_accessor.bc",
+    "object" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/resource_bundle_accessor.o",
+    "swift-dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/resource_bundle_accessor.swiftdeps",
+    "swiftmodule" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/resource_bundle_accessor~partial.swiftmodule"
+  },
+  "/Users/leiquan/Desktop/Code/WordShelf/Sources/WordShelf/APIKeyStore.swift" : {
+    "const-values" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/APIKeyStore.swiftconstvalues",
+    "dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/APIKeyStore.d",
+    "diagnostics" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/APIKeyStore.dia",
+    "index-unit-output-path" : "/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/APIKeyStore.o",
+    "llvm-bc" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/APIKeyStore.bc",
+    "object" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/APIKeyStore.o",
+    "swift-dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/APIKeyStore.swiftdeps",
+    "swiftmodule" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/APIKeyStore~partial.swiftmodule"
+  },
+  "/Users/leiquan/Desktop/Code/WordShelf/Sources/WordShelf/Accessibility.swift" : {
+    "const-values" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Accessibility.swiftconstvalues",
+    "dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Accessibility.d",
+    "diagnostics" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Accessibility.dia",
+    "index-unit-output-path" : "/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Accessibility.o",
+    "llvm-bc" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Accessibility.bc",
+    "object" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Accessibility.o",
+    "swift-dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Accessibility.swiftdeps",
+    "swiftmodule" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Accessibility~partial.swiftmodule"
+  },
+  "/Users/leiquan/Desktop/Code/WordShelf/Sources/WordShelf/App.swift" : {
+    "const-values" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/App.swiftconstvalues",
+    "dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/App.d",
+    "diagnostics" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/App.dia",
+    "index-unit-output-path" : "/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/App.o",
+    "llvm-bc" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/App.bc",
+    "object" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/App.o",
+    "swift-dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/App.swiftdeps",
+    "swiftmodule" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/App~partial.swiftmodule"
+  },
+  "/Users/leiquan/Desktop/Code/WordShelf/Sources/WordShelf/MenuClick.swift" : {
+    "const-values" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuClick.swiftconstvalues",
+    "dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuClick.d",
+    "diagnostics" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuClick.dia",
+    "index-unit-output-path" : "/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuClick.o",
+    "llvm-bc" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuClick.bc",
+    "object" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuClick.o",
+    "swift-dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuClick.swiftdeps",
+    "swiftmodule" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuClick~partial.swiftmodule"
+  },
+  "/Users/leiquan/Desktop/Code/WordShelf/Sources/WordShelf/MenuIcon.swift" : {
+    "const-values" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuIcon.swiftconstvalues",
+    "dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuIcon.d",
+    "diagnostics" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuIcon.dia",
+    "index-unit-output-path" : "/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuIcon.o",
+    "llvm-bc" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuIcon.bc",
+    "object" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuIcon.o",
+    "swift-dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuIcon.swiftdeps",
+    "swiftmodule" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/MenuIcon~partial.swiftmodule"
+  },
+  "/Users/leiquan/Desktop/Code/WordShelf/Sources/WordShelf/PhoneticService.swift" : {
+    "const-values" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/PhoneticService.swiftconstvalues",
+    "dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/PhoneticService.d",
+    "diagnostics" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/PhoneticService.dia",
+    "index-unit-output-path" : "/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/PhoneticService.o",
+    "llvm-bc" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/PhoneticService.bc",
+    "object" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/PhoneticService.o",
+    "swift-dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/PhoneticService.swiftdeps",
+    "swiftmodule" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/PhoneticService~partial.swiftmodule"
+  },
+  "/Users/leiquan/Desktop/Code/WordShelf/Sources/WordShelf/Store.swift" : {
+    "const-values" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Store.swiftconstvalues",
+    "dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Store.d",
+    "diagnostics" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Store.dia",
+    "index-unit-output-path" : "/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Store.o",
+    "llvm-bc" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Store.bc",
+    "object" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Store.o",
+    "swift-dependencies" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Store.swiftdeps",
+    "swiftmodule" : "/Users/leiquan/Desktop/Code/WordShelf/.build/date-group/out/Intermediates.noindex/WordShelf.build/Debug/WordShelf-p.build/Objects-normal/arm64/Store~partial.swiftmodule"
+  }
+}

@@ -18,13 +18,13 @@ final class StoreTests: XCTestCase {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: folder) }
         let store = try Store(url: folder.appendingPathComponent("words.sqlite"))
-        XCTAssertEqual(try store.exportCSV(), "单词,中文含义\r\n")
+        XCTAssertEqual(try store.exportCSV(), "单词,音标,中文含义\r\n")
         try store.save("Apple"); try store.save("apple"); try store.save("don't")
         let csv = try store.exportCSV()
         let rows = csv.components(separatedBy: "\r\n")
-        XCTAssertEqual(rows.first, "单词,中文含义")
+        XCTAssertEqual(rows.first, "单词,音标,中文含义")
         XCTAssertEqual(rows.last, "")
-        XCTAssertEqual(Set(rows.dropFirst().dropLast()), ["\"apple\",\"\"", "\"don't\",\"\""])
+        XCTAssertEqual(Set(rows.dropFirst().dropLast()), ["\"apple\",\"\",\"\"", "\"don't\",\"\",\"\""])
         XCTAssertEqual(try store.all().count, 2)
     }
     func testManualMeaningPersistsUpdatesClearsAndExports() throws {
@@ -42,7 +42,7 @@ final class StoreTests: XCTestCase {
         try reopened.save("APPLE")
         XCTAssertEqual(try reopened.all().count, 1)
         XCTAssertEqual(try reopened.all().first?.meaning, value)
-        XCTAssertEqual(try reopened.exportCSV(), "单词,中文含义\r\n\"apple\",\"苹果, \"\"水果\"\"\n第二行\"\r\n")
+        XCTAssertEqual(try reopened.exportCSV(), "单词,音标,中文含义\r\n\"apple\",\"\",\"苹果, \"\"水果\"\"\n第二行\"\r\n")
         try reopened.setMeaning("apple", value: "")
         XCTAssertEqual(try reopened.all().first?.meaning, "")
     }
@@ -55,7 +55,7 @@ final class StoreTests: XCTestCase {
         try store!.save("pear"); try store!.clearAll(); store = nil
         let reopened = try Store(url: url)
         XCTAssertTrue(try reopened.all().isEmpty)
-        XCTAssertEqual(try reopened.exportCSV(), "单词,中文含义\r\n")
+        XCTAssertEqual(try reopened.exportCSV(), "单词,音标,中文含义\r\n")
         try reopened.save("apple")
         XCTAssertEqual(try reopened.all().count, 1)
         XCTAssertEqual(try reopened.all().first?.meaning, "")
@@ -71,5 +71,61 @@ final class StoreTests: XCTestCase {
         XCTAssertEqual(Set(try reopened.all().map(\.text)), ["apple", "pear"])
         XCTAssertThrowsError(try reopened.save("two words"))
         XCTAssertEqual(try reopened.all().count, 2)
+    }
+
+    func testDateGroupingUsesLocalDaysAndNewestFirst() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 8 * 3600)!
+        let boundary = calendar.date(from: DateComponents(year: 2024, month: 10, day: 24))!
+        let words = [
+            Word(text: "apple", meaning: "苹果", firstSavedAt: boundary.addingTimeInterval(-1)),
+            Word(text: "pear", meaning: "", firstSavedAt: boundary),
+            Word(text: "banana", meaning: "", firstSavedAt: boundary.addingTimeInterval(1))
+        ]
+        let groups = WordDay.groups(words, calendar: calendar)
+        XCTAssertEqual(groups.map { $0.words.count }, [2, 1])
+        XCTAssertEqual(groups[0].words.map(\.text), ["banana", "pear"])
+        XCTAssertEqual(groups[1].words.first?.meaning, "苹果")
+        XCTAssertTrue(WordDay.groups([], calendar: calendar).isEmpty)
+    }
+    func testFirstDateSurvivesDuplicateAndReopen() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let url = folder.appendingPathComponent("words.sqlite")
+        let first = Date(timeIntervalSince1970: 1000)
+        var store: Store? = try Store(url: url)
+        try store!.save("apple", at: first)
+        try store!.save("APPLE", at: first.addingTimeInterval(86400))
+        try store!.setMeaning("apple", value: "苹果")
+        store = nil
+        let reopened = try Store(url: url)
+        let words = try reopened.all()
+        XCTAssertEqual(words.count, 1)
+        XCTAssertEqual(words.first?.firstSavedAt, first)
+        XCTAssertEqual(words.first?.meaning, "苹果")
+        XCTAssertEqual(WordDay.groups(words).count, 1)
+    }
+
+    func testDeleteOnlySelectedWordPersistsAndUpdatesGroupsAndCSV() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let url = folder.appendingPathComponent("words.sqlite")
+        var store: Store? = try Store(url: url)
+        try store!.save("apple", at: Date(timeIntervalSince1970: 1000))
+        try store!.setMeaning("apple", value: "苹果")
+        try store!.save("pear", at: Date(timeIntervalSince1970: 200000))
+        try store!.setMeaning("pear", value: "梨")
+        try store!.delete("apple")
+        store = nil
+        let reopened = try Store(url: url)
+        let words = try reopened.all()
+        XCTAssertEqual(words.map(\.text), ["pear"])
+        XCTAssertEqual(words.first?.meaning, "梨")
+        XCTAssertEqual(WordDay.groups(words).map { $0.words.count }, [1])
+        XCTAssertEqual(try reopened.exportCSV(), "单词,音标,中文含义\r\n\"pear\",\"\",\"梨\"\r\n")
+        try reopened.delete("pear")
+        XCTAssertTrue(WordDay.groups(try reopened.all()).isEmpty)
+        try reopened.save("apple")
+        XCTAssertEqual(try reopened.all().first?.meaning, "")
     }
 }

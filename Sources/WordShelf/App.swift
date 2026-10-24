@@ -5,11 +5,19 @@ import UniformTypeIdentifiers
 
 final class Model: ObservableObject {
     @Published var words: [Word] = []
+    @Published var days: [WordDay] = []
     @Published var status = "正在启动…"
     @Published var authorized = false
     let store: Store?
     let collector = LookupCollector()
     private var drafts: [String: String] = [:]
+    @Published var phoneticStates: [String: String] = [:]
+    @Published var hasPhoneticKey = false
+    @Published var showPhoneticSettings = false
+    @Published private(set) var automaticPhonetics = UserDefaults.standard.bool(forKey: "mwAutomaticPhonetics")
+    private var phoneticTask: Task<Void, Never>?
+    private var phoneticAttempts: [String: Date] = [:]
+    private var automaticPaused = false
     init() {
         // Finder uses Info.plist; this also supplies the icon when running the package in Xcode.
         let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns")
@@ -20,6 +28,7 @@ final class Model: ObservableObject {
         let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("WordShelf")
         do { store = try Store(url: folder.appendingPathComponent("words.sqlite")) }
         catch { store = nil; status = "无法打开单词清单：\(error.localizedDescription)" }
+        hasPhoneticKey = ((try? APIKeyStore.load()) ?? "").isEmpty == false
         reload()
         collector.onPermission = { [weak self] trusted in
             guard let self else { return }
@@ -36,9 +45,101 @@ final class Model: ObservableObject {
         }
         collector.start()
     }
-    func reload() { do { words = try store?.all() ?? [] } catch { status = "无法读取单词清单：\(error.localizedDescription)" } }
-    func stageMeaning(_ word: String, value: String) { drafts[word] = value }
+    func reload() {
+        do {
+            words = try store?.all() ?? []
+            days = WordDay.groups(words)
+            schedulePhonetics()
+        } catch { status = "无法读取单词清单：\(error.localizedDescription)" }
+    }
+    func setAutomaticPhonetics(_ enabled: Bool) {
+        automaticPhonetics = enabled
+        UserDefaults.standard.set(enabled, forKey: "mwAutomaticPhonetics")
+        automaticPaused = false
+        if enabled { schedulePhonetics() }
+        else { phoneticTask?.cancel() }
+    }
+    private func schedulePhonetics() {
+        guard automaticPhonetics, hasPhoneticKey, !automaticPaused, phoneticTask == nil else { return }
+        phoneticTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                self.phoneticTask = nil
+                // Handle a rapid off/on toggle while an old task is cancelling.
+                if Task.isCancelled && self.automaticPhonetics { self.schedulePhonetics() }
+            }
+            while !Task.isCancelled, self.automaticPhonetics, !self.automaticPaused,
+                  let word = PhoneticQueue.next(in: self.words, attempts: self.phoneticAttempts) {
+                self.phoneticAttempts[word.text] = Date()
+                let resumeAt = await self.loadPhonetic(word)
+                guard !self.automaticPaused, self.words.contains(where: { $0.phonetic.isEmpty }) else { break }
+                let delay = max(10, resumeAt?.timeIntervalSinceNow ?? 10)
+                do { try await Task.sleep(nanoseconds: UInt64(min(delay, 86400) * 1_000_000_000)) }
+                catch { break }
+            }
+        }
+    }
+    func retryPhonetic(_ word: Word) {
+        guard hasPhoneticKey else { showPhoneticSettings = true; return }
+        guard phoneticStates[word.text] != "查询中…" else { return }
+        phoneticStates[word.text] = "查询中…"
+        Task { @MainActor in _ = await self.loadPhonetic(word) }
+    }
+    @MainActor func savePhoneticKey(_ raw: String) async -> String? {
+        let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty, key.count <= 512, !key.contains(where: { $0.isWhitespace }) else { return "请输入有效的 API Key" }
+        do {
+            try APIKeyStore.save(key)
+            await PhoneticService.shared.configure(key: key)
+            hasPhoneticKey = true
+            phoneticStates.removeAll()
+            automaticPaused = false
+            schedulePhonetics()
+            showPhoneticSettings = false
+            return nil
+        } catch { return error.localizedDescription }
+    }
+    @MainActor private func loadPhonetic(_ word: Word) async -> Date? {
+        guard let store else { return nil }
+        phoneticStates[word.text] = "查询中…"
+        let result = await PhoneticService.shared.lookup(word.text, retry: true)
+        guard !Task.isCancelled,
+              words.contains(where: { $0.text == word.text && $0.firstSavedAt == word.firstSavedAt }) else { return nil }
+        switch result {
+        case .found(let value):
+            do {
+                try store.setPhonetic(word.text, value: value)
+                phoneticStates.removeValue(forKey: word.text)
+                reload()
+            } catch { phoneticStates[word.text] = "保存失败" }
+        case .missing: phoneticStates[word.text] = "未找到"
+        case .failed(let message): phoneticStates[word.text] = message
+        case .blocked(let message):
+            phoneticStates[word.text] = message
+            automaticPaused = true
+        case .limited(let resumeAt):
+            phoneticStates[word.text] = "服务限流，稍后重试"
+            return resumeAt
+        }
+        return nil
+    }
+    func stageMeaning(_ word: String, value: String) {
+        guard words.contains(where: { $0.text == word }) else { return }
+        drafts[word] = value
+    }
+    func deleteWord(_ word: String) {
+        guard let store else { return }
+        do {
+            try store.delete(word)
+            drafts.removeValue(forKey: word)
+            phoneticStates.removeValue(forKey: word)
+            phoneticAttempts.removeValue(forKey: word)
+            reload()
+            status = "已删除：\(word)"
+        } catch { status = "单词删除失败：\(error.localizedDescription)" }
+    }
     func saveMeaning(_ word: String, value: String) {
+        guard words.contains(where: { $0.text == word }) else { return }
         drafts[word] = value
         _ = commitDrafts()
     }
@@ -61,7 +162,9 @@ final class Model: ObservableObject {
         guard alert.runModal() == .alertSecondButtonReturn else { return }
         do {
             try store.clearAll()
-            drafts.removeAll(); reload(); status = "单词清单已清空"
+            drafts.removeAll()
+            phoneticStates.removeAll(); phoneticAttempts.removeAll()
+            reload(); status = "单词清单已清空"
         } catch { status = "单词清单清空失败：\(error.localizedDescription)" }
     }
     func exportCSV() {
@@ -128,7 +231,7 @@ final class Model: ObservableObject {
                     model.commitDrafts()
                     NSApp.setActivationPolicy(.accessory)
                 }
-        }.defaultSize(width: 760, height: 560)
+        }.defaultSize(width: 920, height: 560)
         MenuBarExtra {
             ShelfMenu(model: model)
         } label: {
@@ -161,6 +264,7 @@ private struct ShelfView: View {
                     Text("单词清单").font(.title2.bold())
                     Spacer()
                     Text("共 \(model.words.count) 个单词")
+                    Button("音标设置") { model.showPhoneticSettings = true }
                     Button("清空单词") { model.clearWords() }.disabled(model.words.isEmpty || model.store == nil)
                     Button("导出 CSV") { model.exportCSV() }.disabled(model.words.isEmpty || model.store == nil)
                 }
@@ -175,8 +279,12 @@ private struct ShelfView: View {
                     Text("当前 App：\(Bundle.main.bundleURL.path)")
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
-                HStack {
+                Text("按首次收录日期分组，同一单词仅计数一次。")
+                    .font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 16) {
+                    Color.clear.frame(width: 24, height: 1)
                     Text("单词").frame(width: 170, alignment: .leading)
+                    Text("音标").frame(width: 150, alignment: .leading)
                     Text("中文含义").frame(maxWidth: .infinity, alignment: .leading)
                 }.font(.headline).padding(.horizontal, 12)
                 if model.words.isEmpty {
@@ -186,21 +294,25 @@ private struct ShelfView: View {
                 } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(model.words.enumerated()), id: \.element.id) { index, word in
-                            HStack(alignment: .top, spacing: 16) {
-                                Text(word.text).textSelection(.enabled).frame(width: 170, alignment: .leading)
-                                MeaningCell(word: word,
-                                    onEdit: { model.stageMeaning(word.text, value: $0) },
-                                    onSave: { model.saveMeaning(word.text, value: $0) })
-                            }
-                                .padding(.horizontal, 12).padding(.vertical, 6)
+                        ForEach(model.days) { day in
+                            Section {
+                                ForEach(Array(day.words.enumerated()), id: \.element.id) { index, word in
+                                    WordRow(word: word, index: index, model: model)
+                                }
+                            } header: {
+                                Text("\(day.date.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits)))（\(day.words.count) 个单词）")
+                                .font(.headline)
+                                .padding(.horizontal, 12).padding(.vertical, 10)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color(nsColor: NSColor.alternatingContentBackgroundColors[index % 2]))
+                                .background(Color(nsColor: .controlBackgroundColor))
+                            }
                         }
                     }
                 }
                 }
-            }.padding(20).frame(minWidth: 680, minHeight: 480)
+                MWAttribution()
+            }.padding(20).frame(minWidth: 920, minHeight: 480)
+                .sheet(isPresented: $model.showPhoneticSettings) { PhoneticSettings(model: model) }
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in model.refreshPermission() }
     }
 }
@@ -210,6 +322,113 @@ private final class ShelfDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         model?.commitDrafts() == false ? .terminateCancel : .terminateNow
+    }
+}
+
+private struct PhoneticSettings: View {
+    @ObservedObject var model: Model
+    @Environment(\.dismiss) private var dismiss
+    @State private var key = ""
+    @State private var error = ""
+    @State private var saving = false
+    @State private var automatic = false
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("音标设置").font(.title2.bold())
+            Text("Merriam-Webster's Learner's Dictionary").font(.headline)
+            Text("个人非商业用途，每天最多 1000 次查询。请选择 Learner’s Dictionary 的 Key。")
+            SecureField(model.hasPhoneticKey ? "输入新 Key 以替换已保存的 Key" : "API Key", text: $key)
+            Link("注册免费 API Key", destination: URL(string: "https://www.dictionaryapi.com/register/index")!)
+            Text("Key 保存在本机钥匙串，不写入单词数据库或 CSV。")
+                .font(.callout).foregroundStyle(.secondary)
+            Toggle("启动后自动补全音标（每 10 秒一个）", isOn: $automatic)
+            Text("自动查询须已获得 Merriam-Webster 的书面许可；普通免费 Key 本身不代表该许可。")
+                .font(.caption).foregroundStyle(.secondary)
+            if !error.isEmpty { Text(error).foregroundStyle(.red) }
+            MWAttribution()
+            HStack {
+                Spacer()
+                Button("取消") { dismiss() }
+                Button("保存") {
+                    saving = true
+                    Task { @MainActor in
+                        if key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && model.hasPhoneticKey {
+                            model.setAutomaticPhonetics(automatic)
+                            dismiss()
+                        } else {
+                            error = await model.savePhoneticKey(key) ?? ""
+                            if error.isEmpty { model.setAutomaticPhonetics(automatic) }
+                        }
+                        saving = false
+                    }
+                }.disabled(saving || (!model.hasPhoneticKey && key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
+            }
+        }.padding(24).frame(width: 500)
+            .onAppear { automatic = model.automaticPhonetics }
+    }
+}
+
+private struct MWAttribution: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            if let url = Bundle.module.url(forResource: "MWLogo", withExtension: "png"), let logo = NSImage(contentsOf: url) {
+                Image(nsImage: logo).resizable().scaledToFit().frame(width: 50, height: 50)
+                    .accessibilityLabel("Merriam-Webster")
+            }
+            Link("Merriam-Webster's Learner's Dictionary", destination: URL(string: "https://www.merriam-webster.com/")!)
+                .font(.caption)
+            Spacer()
+        }
+    }
+}
+
+private struct WordRow: View {
+    let word: Word
+    let index: Int
+    @ObservedObject var model: Model
+    @State private var hovered = false
+    var body: some View {
+        HStack(alignment: .center, spacing: 16) {
+            Button {
+                model.deleteWord(word.text)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(width: 24, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("删除 \(word.text)")
+            .accessibilityLabel("删除单词 \(word.text)")
+            .opacity(hovered ? 1 : 0)
+            .allowsHitTesting(hovered)
+            .accessibilityHidden(!hovered)
+            Text(word.text).textSelection(.enabled).frame(width: 170, alignment: .leading)
+            HStack(spacing: 6) {
+                if word.phonetic.isEmpty {
+                    Button { model.retryPhonetic(word) } label: {
+                        Text(model.phoneticStates[word.text] ?? "查询音标")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .disabled(model.phoneticStates[word.text] == "查询中…")
+                    .help("点击查询 Merriam-Webster Learner’s Dictionary 音标")
+                } else {
+                    Text(word.phonetic).textSelection(.enabled)
+                }
+            }
+            .frame(width: 150, alignment: .leading)
+            .help("音标来源：Merriam-Webster's Learner's Dictionary")
+            MeaningCell(word: word,
+                onEdit: { model.stageMeaning(word.text, value: $0) },
+                onSave: { model.saveMeaning(word.text, value: $0) })
+        }
+        .padding(.horizontal, 12).padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(nsColor: NSColor.alternatingContentBackgroundColors[index % 2]))
+        .contentShape(Rectangle())
+        .onHover { hovered = $0 }
     }
 }
 

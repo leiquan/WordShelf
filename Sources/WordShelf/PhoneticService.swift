@@ -7,6 +7,7 @@ enum PhoneticResult: Equatable {
     case failed(String)
     case blocked(String)
     case limited(Date)
+    case quota(Date)
 }
 
 actor PhoneticService {
@@ -76,8 +77,8 @@ actor PhoneticService {
             key = stored
         } catch { return .blocked("无法读取 API Key") }
         if let defaults = quotaDefaults,
-           let _ = APIQuota.reserve(key: key, defaults: defaults) {
-            return .blocked("今日免费额度已用完，明日再试")
+           let resumeAt = APIQuota.reserve(key: key, defaults: defaults) {
+            return .quota(resumeAt)
         }
         let base = URL(string: "https://www.dictionaryapi.com/api/v3/references/learners/json")!.appendingPathComponent(word)
         var components = URLComponents(url: base, resolvingAgainstBaseURL: false)!
@@ -159,8 +160,8 @@ actor PhoneticService {
 
 // Give never-tried words priority, then revisit the oldest unsuccessful attempt.
 enum PhoneticQueue {
-    static func next(in words: [Word], attempts: [String: Date]) -> Word? {
-        words.filter { $0.phonetic.isEmpty }.min {
+    static func next(in words: [Word], attempts: [String: Date], now: Date = Date()) -> Word? {
+        words.filter { $0.phonetic.isEmpty && $0.nextLookupAt <= now }.min {
             let lhs = attempts[$0.text] ?? .distantPast
             let rhs = attempts[$1.text] ?? .distantPast
             if lhs == rhs { return $0.firstSavedAt > $1.firstSavedAt }
@@ -183,5 +184,16 @@ enum APIQuota {
         if count >= limit { return Date(timeIntervalSince1970: start + 86400) }
         defaults.set(count + 1, forKey: prefix + ".count")
         return nil
+    }
+}
+
+enum PhoneticRetry {
+    static func date(for result: PhoneticResult, failures: Int, now: Date = Date()) -> Date? {
+        switch result {
+        case .missing: return now.addingTimeInterval(7 * 86400)
+        case .failed: return now.addingTimeInterval(min(6 * 3600, 60 * pow(2, Double(min(max(0, failures), 12)))))
+        case .limited(let date), .quota(let date): return date
+        case .found, .blocked: return nil
+        }
     }
 }

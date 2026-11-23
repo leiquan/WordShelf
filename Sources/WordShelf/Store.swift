@@ -7,6 +7,8 @@ struct Word: Identifiable {
     let meaning: String
     let firstSavedAt: Date
     var phonetic: String = ""
+    var nextLookupAt: Date = .distantPast
+    var phoneticFailures: Int = 0
 }
 struct WordDay: Identifiable {
     var id: Date { date }
@@ -40,9 +42,11 @@ final class Store {
         guard sqlite3_prepare_v2(db, "PRAGMA table_info(words)", -1, &schema, nil) == SQLITE_OK else { throw failure() }
         var hasPhonetic = false
         var hasProvider = false
+        var columns = Set<String>()
         while sqlite3_step(schema) == SQLITE_ROW {
             if let name = sqlite3_column_text(schema, 1) {
                 let column = String(cString: name)
+                columns.insert(column)
                 if column == "phonetic" { hasPhonetic = true }
                 if column == "phonetic_provider" { hasProvider = true }
             }
@@ -53,6 +57,9 @@ final class Store {
         }
         if !hasProvider {
             guard sqlite3_exec(db, "ALTER TABLE words ADD COLUMN phonetic_provider TEXT NOT NULL DEFAULT ''", nil, nil, nil) == SQLITE_OK else { throw failure() }
+        }
+        for (column, declaration) in [("phonetic_retry_at", "REAL NOT NULL DEFAULT 0"), ("phonetic_failures", "INTEGER NOT NULL DEFAULT 0")] where !columns.contains(column) {
+            guard sqlite3_exec(db, "ALTER TABLE words ADD COLUMN \(column) \(declaration)", nil, nil, nil) == SQLITE_OK else { throw failure() }
         }
     }
     deinit { sqlite3_close(db) }
@@ -77,11 +84,35 @@ final class Store {
     }
     func setPhonetic(_ word: String, value: String) throws {
         var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, "UPDATE words SET phonetic=?,phonetic_provider='merriam-webster-learners' WHERE word=?", -1, &stmt, nil) == SQLITE_OK else { throw failure() }
+        guard sqlite3_prepare_v2(db, "UPDATE words SET phonetic=?,phonetic_provider='merriam-webster-learners',phonetic_retry_at=0,phonetic_failures=0 WHERE word=?", -1, &stmt, nil) == SQLITE_OK else { throw failure() }
         defer { sqlite3_finalize(stmt) }
         sqlite3_bind_text(stmt, 1, value, -1, transient)
         sqlite3_bind_text(stmt, 2, word, -1, transient)
         guard sqlite3_step(stmt) == SQLITE_DONE else { throw failure() }
+    }
+    func deferPhonetic(_ word: String, until date: Date, failures: Int) throws {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "UPDATE words SET phonetic_retry_at=?,phonetic_failures=? WHERE word=?", -1, &stmt, nil) == SQLITE_OK else { throw failure() }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_double(stmt, 1, date.timeIntervalSince1970)
+        sqlite3_bind_int(stmt, 2, Int32(clamping: failures))
+        sqlite3_bind_text(stmt, 3, word, -1, transient)
+        guard sqlite3_step(stmt) == SQLITE_DONE else { throw failure() }
+    }
+    @discardableResult func restore(_ word: Word) throws -> Bool {
+        var stmt: OpaquePointer?
+        let sql = "INSERT OR IGNORE INTO words(word,count,first,last,source,meaning,phonetic,phonetic_provider,phonetic_retry_at,phonetic_failures) VALUES(?,1,?,?,'Look Up',?,?,'merriam-webster-learners',?,?)"
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { throw failure() }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, word.text, -1, transient)
+        sqlite3_bind_double(stmt, 2, word.firstSavedAt.timeIntervalSince1970)
+        sqlite3_bind_double(stmt, 3, word.firstSavedAt.timeIntervalSince1970)
+        sqlite3_bind_text(stmt, 4, word.meaning, -1, transient)
+        sqlite3_bind_text(stmt, 5, word.phonetic, -1, transient)
+        sqlite3_bind_double(stmt, 6, word.nextLookupAt.timeIntervalSince1970)
+        sqlite3_bind_int(stmt, 7, Int32(clamping: word.phoneticFailures))
+        guard sqlite3_step(stmt) == SQLITE_DONE else { throw failure() }
+        return sqlite3_changes(db) > 0
     }
     func delete(_ word: String) throws {
         var stmt: OpaquePointer?
@@ -101,14 +132,14 @@ final class Store {
     }
     func all() throws -> [Word] {
         var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, "SELECT word,meaning,first,CASE WHEN phonetic_provider='merriam-webster-learners' THEN phonetic ELSE '' END FROM words ORDER BY first DESC,word", -1, &stmt, nil) == SQLITE_OK else { throw failure() }
+        guard sqlite3_prepare_v2(db, "SELECT word,meaning,first,CASE WHEN phonetic_provider='merriam-webster-learners' THEN phonetic ELSE '' END,phonetic_retry_at,phonetic_failures FROM words ORDER BY first DESC,word", -1, &stmt, nil) == SQLITE_OK else { throw failure() }
         defer { sqlite3_finalize(stmt) }
         var rows: [Word] = []
         while true {
             let status = sqlite3_step(stmt)
             if status == SQLITE_DONE { return rows }
             guard status == SQLITE_ROW, let text = sqlite3_column_text(stmt, 0) else { throw failure() }
-            rows.append(Word(text: String(cString: text), meaning: String(cString: sqlite3_column_text(stmt, 1)), firstSavedAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 2)), phonetic: String(cString: sqlite3_column_text(stmt, 3))))
+            rows.append(Word(text: String(cString: text), meaning: String(cString: sqlite3_column_text(stmt, 1)), firstSavedAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 2)), phonetic: String(cString: sqlite3_column_text(stmt, 3)), nextLookupAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)), phoneticFailures: Int(sqlite3_column_int(stmt, 5))))
         }
     }
 }

@@ -13,90 +13,122 @@ final class LookupCollector {
     var onWord: ((String) -> Void)?
     var onStatus: ((String) -> Void)?
     var onPermission: ((Bool) -> Void)?
+    private let trustCheck: () -> Bool
     private var monitor: Any?
     var isMonitoring: Bool { monitor != nil }
     private var permissionTimer: Timer?
+    private var trusted: Bool?
+    private var lastStatus: String?
+    private var generation = 0
+    private let queue = DispatchQueue(label: "local.wordshelf.lookup", qos: .userInteractive)
+    // Only accessed by the serial queue below.
     private var pending: MenuClick?
     private var contextPID: pid_t?
     private var contextTime: TimeInterval = 0
     private let system = AXUIElementCreateSystemWide()
-
-    init() { AXUIElementSetMessagingTimeout(system, 0.15) }
+    private struct Click {
+        let type: NSEvent.EventType
+        let point: CGPoint
+        let control: Bool
+        let timestamp: TimeInterval
+        let pid: pid_t?
+        let generation: Int
+    }
+    init(trustCheck: @escaping () -> Bool = { AXIsProcessTrusted() }) {
+        self.trustCheck = trustCheck
+        AXUIElementSetMessagingTimeout(system, 0.06)
+    }
     func start() {
         stop()
         permissionTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.checkPermission() }
         checkPermission()
     }
     func stop() {
+        generation += 1
         permissionTimer?.invalidate(); permissionTimer = nil
         if let monitor { NSEvent.removeMonitor(monitor) }
-        monitor = nil; pending = nil; contextPID = nil
+        monitor = nil; trusted = nil; lastStatus = nil
+        queue.async { [weak self] in self?.pending = nil; self?.contextPID = nil }
     }
     deinit { stop() }
+    private func sendStatus(_ value: String) {
+        guard value != lastStatus else { return }
+        lastStatus = value; onStatus?(value)
+    }
     func checkPermission() {
-        let trusted = AXIsProcessTrusted()
-        onPermission?(trusted)
-        guard trusted else {
-            if let monitor { NSEvent.removeMonitor(monitor) }
-            monitor = nil; pending = nil; contextPID = nil
-            onStatus?("未获辅助功能授权，无法记录单词")
+        let value = trustCheck()
+        if trusted != value { trusted = value; onPermission?(value) }
+        guard value else {
+            if let monitor { NSEvent.removeMonitor(monitor); generation += 1 }
+            monitor = nil
+            queue.async { [weak self] in self?.pending = nil; self?.contextPID = nil }
+            sendStatus("未获辅助功能授权，无法记录单词")
             return
         }
         guard monitor == nil else { return }
-        monitor = NSEvent.addGlobalMonitorForEvents(matching: [.rightMouseDown, .leftMouseDown, .leftMouseUp]) { [weak self] event in self?.handle(event) }
-        onStatus?(monitor == nil ? "无法启动单词记录，请重新打开 WordShelf" : "单词记录已启用")
+        monitor = NSEvent.addGlobalMonitorForEvents(matching: [.rightMouseDown, .leftMouseDown, .leftMouseUp]) { [weak self] event in self?.capture(event) }
+        sendStatus(monitor == nil ? "无法启动单词记录，请重新打开 WordShelf" : "单词记录已启用")
     }
-    private func handle(_ event: NSEvent) {
-        guard AXIsProcessTrusted() else { pending = nil; return }
-        // CGEvent uses the same top-left global coordinates as AX hit testing.
-        // Use the event location, not the current cursor location (which may have moved).
-        guard let point = event.cgEvent?.location else { pending = nil; return }
-        if event.type == .rightMouseDown || (event.type == .leftMouseDown && event.modifierFlags.contains(.control)) {
-            pending = nil
-            contextPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
-            contextTime = event.timestamp
-            return
+    private func capture(_ event: NSEvent) {
+        guard trusted == true, let point = event.cgEvent?.location else { return }
+        let isContext = event.type == .rightMouseDown || (event.type == .leftMouseDown && event.modifierFlags.contains(.control))
+        let click = Click(type: event.type, point: point, control: event.modifierFlags.contains(.control),
+                          timestamp: event.timestamp, pid: isContext ? NSWorkspace.shared.frontmostApplication?.processIdentifier : nil,
+                          generation: generation)
+        queue.async { [weak self] in self?.handle(click) }
+    }
+    private func handle(_ click: Click) {
+        if click.type == .rightMouseDown || (click.type == .leftMouseDown && click.control) {
+            pending = nil; contextPID = click.pid; contextTime = click.timestamp; return
         }
-        if event.type == .leftMouseUp {
+        if click.type == .leftMouseUp {
             let candidate = pending; pending = nil
-            guard let candidate, let word = candidate.released(at: point, timestamp: event.timestamp) else { return }
+            guard let candidate, let word = candidate.released(at: click.point, timestamp: click.timestamp) else { return }
             contextPID = nil
-            // Persist after the click has completed. Do not activate our window or reopen Look Up.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                guard AXIsProcessTrusted() else { return }
-                self?.onWord?(word)
+                guard let self, self.generation == click.generation, AXIsProcessTrusted() else { return }
+                self.onWord?(word)
             }
             return
         }
-        guard event.type == .leftMouseDown else { return }
+        guard click.type == .leftMouseDown else { return }
         pending = nil
-        guard let contextPID, event.timestamp - contextTime >= 0,
-              event.timestamp - contextTime < 30 else { return }
+        guard let pid = contextPID, click.timestamp - contextTime >= 0, click.timestamp - contextTime < 30 else { return }
+        // Only the first click after opening a context menu needs AX inspection.
+        contextPID = nil
+        pending = inspect(click, owner: pid)
+    }
+    private func inspect(_ click: Click, owner pid: pid_t) -> MenuClick? {
+        let deadline = CFAbsoluteTimeGetCurrent() + 0.2
+        func read(_ element: AXUIElement, _ key: String) -> CFTypeRef? {
+            let remaining = deadline - CFAbsoluteTimeGetCurrent()
+            guard remaining > 0 else { return nil }
+            AXUIElementSetMessagingTimeout(element, Float(min(0.04, remaining)))
+            return axValue(element, key)
+        }
         var hit: AXUIElement?
-        guard AXUIElementCopyElementAtPosition(system, Float(point.x), Float(point.y), &hit) == .success, let hit else { return }
-        AXUIElementSetMessagingTimeout(hit, 0.15)
+        guard AXUIElementCopyElementAtPosition(system, Float(click.point.x), Float(click.point.y), &hit) == .success, let hit else { return nil }
         var item = hit
-        // A menu label can be a child of AXMenuItem.
         for _ in 0..<3 {
-            if axValue(item, kAXRoleAttribute) as? String == kAXMenuItemRole { break }
-            guard let parent = axValue(item, kAXParentAttribute), CFGetTypeID(parent) == AXUIElementGetTypeID() else { return }
+            if read(item, kAXRoleAttribute) as? String == kAXMenuItemRole { break }
+            guard let parent = read(item, kAXParentAttribute), CFGetTypeID(parent) == AXUIElementGetTypeID() else { return nil }
             item = parent as! AXUIElement
         }
-        guard axValue(item, kAXRoleAttribute) as? String == kAXMenuItemRole,
-              let title = axValue(item, kAXTitleAttribute) as? String,
+        guard read(item, kAXRoleAttribute) as? String == kAXMenuItemRole,
+              let title = read(item, kAXTitleAttribute) as? String,
               let word = LookupTitle.word(title),
-              (axValue(item, kAXEnabledAttribute) as? Bool) == true else { return }
+              (read(item, kAXEnabledAttribute) as? Bool) == true else { return nil }
         var owner: pid_t = 0
-        guard AXUIElementGetPid(item, &owner) == .success, owner == contextPID,
-              let parent = axValue(item, kAXParentAttribute), CFGetTypeID(parent) == AXUIElementGetTypeID(),
-              axValue(parent as! AXUIElement, kAXRoleAttribute) as? String == kAXMenuRole else { return }
-        guard let originValue = axValue(item, kAXPositionAttribute), CFGetTypeID(originValue) == AXValueGetTypeID(),
-              let sizeValue = axValue(item, kAXSizeAttribute), CFGetTypeID(sizeValue) == AXValueGetTypeID() else { return }
+        guard AXUIElementGetPid(item, &owner) == .success, owner == pid,
+              let parent = read(item, kAXParentAttribute), CFGetTypeID(parent) == AXUIElementGetTypeID(),
+              read(parent as! AXUIElement, kAXRoleAttribute) as? String == kAXMenuRole else { return nil }
+        guard let originValue = read(item, kAXPositionAttribute), CFGetTypeID(originValue) == AXValueGetTypeID(),
+              let sizeValue = read(item, kAXSizeAttribute), CFGetTypeID(sizeValue) == AXValueGetTypeID() else { return nil }
         var origin = CGPoint.zero; var size = CGSize.zero
         guard AXValueGetValue(originValue as! AXValue, .cgPoint, &origin),
-              AXValueGetValue(sizeValue as! AXValue, .cgSize, &size) else { return }
+              AXValueGetValue(sizeValue as! AXValue, .cgSize, &size) else { return nil }
         let bounds = CGRect(origin: origin, size: size)
-        guard bounds.contains(point) else { return }
-        pending = MenuClick(word: word, bounds: bounds, timestamp: event.timestamp)
+        guard bounds.contains(click.point) else { return nil }
+        return MenuClick(word: word, bounds: bounds, timestamp: click.timestamp)
     }
 }

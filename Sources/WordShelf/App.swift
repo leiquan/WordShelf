@@ -3,6 +3,8 @@ import AppKit
 import ApplicationServices
 import UniformTypeIdentifiers
 
+struct WordDeletion { let word: Word; let expiresAt: Date }
+
 final class Model: ObservableObject {
     @Published var words: [Word] = []
     @Published var days: [WordDay] = []
@@ -18,17 +20,33 @@ final class Model: ObservableObject {
     private var phoneticTask: Task<Void, Never>?
     private var phoneticAttempts: [String: Date] = [:]
     private var automaticPaused = false
-    init() {
+    @Published private(set) var phoneticResumeAt: Date?
+    @Published private(set) var deletedWords: [WordDeletion] = []
+    private var undoTask: Task<Void, Never>?
+    private var activeAutomaticWord: String?
+    private var phoneticRequests: [String: UUID] = [:]
+    private let undoInterval: TimeInterval
+    private let requestInterval: TimeInterval
+    private let preferences: UserDefaults
+    private let phoneticLookup: @Sendable (String) async -> PhoneticResult
+    init(storeURL: URL? = nil, collectorEnabled: Bool = true, loadCredential: Bool = true,
+         preferences: UserDefaults = .standard, requestInterval: TimeInterval = 10, undoInterval: TimeInterval = 8,
+         phoneticLookup: @escaping @Sendable (String) async -> PhoneticResult = { await PhoneticService.shared.lookup($0, retry: true) }) {
+        self.undoInterval = max(0.001, undoInterval)
+        self.requestInterval = max(0.001, requestInterval)
+        self.preferences = preferences
+        self.phoneticLookup = phoneticLookup
+        self.automaticPhonetics = preferences.bool(forKey: "mwAutomaticPhonetics")
         // Finder uses Info.plist; this also supplies the icon when running the package in Xcode.
         let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns")
             ?? Bundle.module.url(forResource: "AppIcon", withExtension: "icns")
-        if let iconURL, let icon = NSImage(contentsOf: iconURL) {
+        if collectorEnabled, let iconURL, let icon = NSImage(contentsOf: iconURL) {
             NSApplication.shared.applicationIconImage = icon
         }
         let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("WordShelf")
-        do { store = try Store(url: folder.appendingPathComponent("words.sqlite")) }
+        do { store = try Store(url: storeURL ?? folder.appendingPathComponent("words.sqlite")) }
         catch { store = nil; status = "无法打开单词清单：\(error.localizedDescription)" }
-        hasPhoneticKey = ((try? APIKeyStore.load()) ?? "").isEmpty == false
+        hasPhoneticKey = loadCredential && (((try? APIKeyStore.load()) ?? "").isEmpty == false)
         reload()
         collector.onPermission = { [weak self] trusted in
             guard let self else { return }
@@ -43,7 +61,7 @@ final class Model: ObservableObject {
             do { try store.save(word); self.reload(); self.status = "已记录：\(word)" }
             catch { self.status = "单词保存失败：\(error.localizedDescription)" }
         }
-        collector.start()
+        if collectorEnabled { collector.start() }
     }
     func reload() {
         do {
@@ -54,10 +72,13 @@ final class Model: ObservableObject {
     }
     func setAutomaticPhonetics(_ enabled: Bool) {
         automaticPhonetics = enabled
-        UserDefaults.standard.set(enabled, forKey: "mwAutomaticPhonetics")
+        preferences.set(enabled, forKey: "mwAutomaticPhonetics")
         automaticPaused = false
         if enabled { schedulePhonetics() }
-        else { phoneticTask?.cancel() }
+        else {
+            phoneticTask?.cancel()
+            if let word = activeAutomaticWord, phoneticStates[word] == "查询中…" { phoneticStates.removeValue(forKey: word) }
+        }
     }
     private func schedulePhonetics() {
         guard automaticPhonetics, hasPhoneticKey, !automaticPaused, phoneticTask == nil else { return }
@@ -68,13 +89,25 @@ final class Model: ObservableObject {
                 // Handle a rapid off/on toggle while an old task is cancelling.
                 if Task.isCancelled && self.automaticPhonetics { self.schedulePhonetics() }
             }
-            while !Task.isCancelled, self.automaticPhonetics, !self.automaticPaused,
-                  let word = PhoneticQueue.next(in: self.words, attempts: self.phoneticAttempts) {
+            while !Task.isCancelled && self.automaticPhonetics && !self.automaticPaused {
+                if let resumeAt = self.phoneticResumeAt, resumeAt > Date() {
+                    do { try await Task.sleep(nanoseconds: UInt64(min(3600, max(0.01, resumeAt.timeIntervalSinceNow)) * 1_000_000_000)) }
+                    catch { break }
+                    continue
+                }
+                self.phoneticResumeAt = nil
+                guard let word = PhoneticQueue.next(in: self.words, attempts: self.phoneticAttempts) else {
+                    guard let date = self.words.filter({ $0.phonetic.isEmpty }).map(\.nextLookupAt).min(), date > Date() else { break }
+                    do { try await Task.sleep(nanoseconds: UInt64(min(60, max(0.01, date.timeIntervalSinceNow)) * 1_000_000_000)) }
+                    catch { break }
+                    continue
+                }
                 self.phoneticAttempts[word.text] = Date()
-                let resumeAt = await self.loadPhonetic(word)
+                self.activeAutomaticWord = word.text
+                _ = await self.loadPhonetic(word)
+                self.activeAutomaticWord = nil
                 guard !self.automaticPaused, self.words.contains(where: { $0.phonetic.isEmpty }) else { break }
-                let delay = max(10, resumeAt?.timeIntervalSinceNow ?? 10)
-                do { try await Task.sleep(nanoseconds: UInt64(min(delay, 86400) * 1_000_000_000)) }
+                do { try await Task.sleep(nanoseconds: UInt64(self.requestInterval * 1_000_000_000)) }
                 catch { break }
             }
         }
@@ -94,6 +127,7 @@ final class Model: ObservableObject {
             hasPhoneticKey = true
             phoneticStates.removeAll()
             automaticPaused = false
+            phoneticResumeAt = nil
             schedulePhonetics()
             showPhoneticSettings = false
             return nil
@@ -101,8 +135,16 @@ final class Model: ObservableObject {
     }
     @MainActor private func loadPhonetic(_ word: Word) async -> Date? {
         guard let store else { return nil }
+        let requestID = UUID()
+        phoneticRequests[word.text] = requestID
         phoneticStates[word.text] = "查询中…"
-        let result = await PhoneticService.shared.lookup(word.text, retry: true)
+        defer {
+            if phoneticRequests[word.text] == requestID {
+                phoneticRequests.removeValue(forKey: word.text)
+                if phoneticStates[word.text] == "查询中…" { phoneticStates.removeValue(forKey: word.text) }
+            }
+        }
+        let result = await phoneticLookup(word.text)
         guard !Task.isCancelled,
               words.contains(where: { $0.text == word.text && $0.firstSavedAt == word.firstSavedAt }) else { return nil }
         switch result {
@@ -112,16 +154,32 @@ final class Model: ObservableObject {
                 phoneticStates.removeValue(forKey: word.text)
                 reload()
             } catch { phoneticStates[word.text] = "保存失败" }
-        case .missing: phoneticStates[word.text] = "未找到"
-        case .failed(let message): phoneticStates[word.text] = message
+        case .missing:
+            phoneticStates[word.text] = "未找到，七天后再查"
+            deferLookup(word, result: result)
+        case .failed(let message):
+            phoneticStates[word.text] = message
+            deferLookup(word, result: result)
         case .blocked(let message):
             phoneticStates[word.text] = message
             automaticPaused = true
         case .limited(let resumeAt):
             phoneticStates[word.text] = "服务限流，稍后重试"
+            phoneticResumeAt = resumeAt
+            return resumeAt
+        case .quota(let resumeAt):
+            phoneticStates[word.text] = "额度用完，到期续查"
+            phoneticResumeAt = resumeAt
             return resumeAt
         }
         return nil
+    }
+    private func deferLookup(_ word: Word, result: PhoneticResult) {
+        guard let date = PhoneticRetry.date(for: result, failures: word.phoneticFailures) else { return }
+        do {
+            try store?.deferPhonetic(word.text, until: date, failures: min(word.phoneticFailures + 1, 1000))
+            reload()
+        } catch { status = "重试时间保存失败：\(error.localizedDescription)" }
     }
     func stageMeaning(_ word: String, value: String) {
         guard words.contains(where: { $0.text == word }) else { return }
@@ -130,13 +188,39 @@ final class Model: ObservableObject {
     func deleteWord(_ word: String) {
         guard let store else { return }
         do {
+            guard let existing = words.first(where: { $0.text == word }) else { return }
+            let snapshot = Word(text: existing.text, meaning: (drafts[word] ?? existing.meaning).trimmingCharacters(in: .whitespacesAndNewlines),
+                                firstSavedAt: existing.firstSavedAt, phonetic: existing.phonetic,
+                                nextLookupAt: existing.nextLookupAt, phoneticFailures: existing.phoneticFailures)
             try store.delete(word)
+            deletedWords.append(WordDeletion(word: snapshot, expiresAt: Date().addingTimeInterval(undoInterval)))
+            scheduleUndoExpiry()
             drafts.removeValue(forKey: word)
             phoneticStates.removeValue(forKey: word)
             phoneticAttempts.removeValue(forKey: word)
             reload()
             status = "已删除：\(word)"
         } catch { status = "单词删除失败：\(error.localizedDescription)" }
+    }
+    func undoDelete() {
+        deletedWords.removeAll { $0.expiresAt <= Date() }
+        guard let deletion = deletedWords.last, let store else { return }
+        do {
+            let restored = try store.restore(deletion.word)
+            deletedWords.removeLast()
+            reload()
+            status = restored ? "已恢复：\(deletion.word.text)" : "该词已重新记录，保留现有内容"
+        } catch { status = "恢复失败：\(error.localizedDescription)" }
+    }
+    private func scheduleUndoExpiry() {
+        undoTask?.cancel()
+        deletedWords.removeAll { $0.expiresAt <= Date() }
+        guard let expiry = deletedWords.map(\.expiresAt).min() else { return }
+        undoTask = Task { @MainActor [weak self] in
+            do { try await Task.sleep(nanoseconds: UInt64(max(0.01, expiry.timeIntervalSinceNow) * 1_000_000_000)) }
+            catch { return }
+            self?.scheduleUndoExpiry()
+        }
     }
     func saveMeaning(_ word: String, value: String) {
         guard words.contains(where: { $0.text == word }) else { return }
@@ -163,6 +247,7 @@ final class Model: ObservableObject {
         do {
             try store.clearAll()
             drafts.removeAll()
+            deletedWords.removeAll(); undoTask?.cancel()
             phoneticStates.removeAll(); phoneticAttempts.removeAll()
             reload(); status = "单词清单已清空"
         } catch { status = "单词清单清空失败：\(error.localizedDescription)" }
@@ -269,7 +354,14 @@ private struct ShelfView: View {
                     Button("导出 CSV") { model.exportCSV() }.disabled(model.words.isEmpty || model.store == nil)
                 }
                 Text("选择英文单词并右键，选择“Look Up／查询”后自动记录该词；设置密钥可查询并显示音标；中文含义可自行手动填写。").font(.callout)
-                Text(model.status).foregroundStyle(.secondary).textSelection(.enabled)
+                HStack {
+                    Text(model.status).foregroundStyle(.secondary).textSelection(.enabled)
+                    if !model.deletedWords.isEmpty { Button("撤销删除") { model.undoDelete() } }
+                }
+                if model.automaticPhonetics, let resumeAt = model.phoneticResumeAt, resumeAt > Date() {
+                    Text("音标补全暂停，将于 \(resumeAt.formatted(date: .abbreviated, time: .shortened)) 自动继续")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 if !model.authorized {
                     HStack {
                         Button("授权辅助功能访问") { model.permission() }

@@ -5,11 +5,11 @@
       "name" : "WordShelf",
       "path" : "/Users/leiquan/Desktop/Code/WordShelf",
       "projects" : [
-        "1213df37b29ca82c2c42a1b4d51926c2b4b00a8b09d3947030a56f96fc2450ac",
+        "dd6c5720f688c55dbc3d04f4c3cee408383f9724201bcc2fbcb993ccf03a76b6",
         "a62f0f81dc0ce24f84a83d26d8e3bb1fa47eb81ce4e80134a44c2462e83ebd42"
       ]
     },
-    "signature" : "c071814963a0be55e10ff3feb3595b659dfa1597638a2e8c08904931f57eca59",
+    "signature" : "b052a5a6ff8d3bf600be287caea223b635f5e6a7550368d5ac69eb35b7cf3a91",
     "type" : "workspace"
   },
   {
@@ -201,6 +201,14 @@
               {
                 "fileType" : "sourcecode.swift",
                 "guid" : "PACKAGE:wordshelf::MAINGROUP::REF_2::REF_0",
+                "name" : "OptimizationTests.swift",
+                "path" : "OptimizationTests.swift",
+                "sourceTree" : "<group>",
+                "type" : "file"
+              },
+              {
+                "fileType" : "sourcecode.swift",
+                "guid" : "PACKAGE:wordshelf::MAINGROUP::REF_2::REF_1",
                 "name" : "PhoneticTests.swift",
                 "path" : "PhoneticTests.swift",
                 "sourceTree" : "<group>",
@@ -208,7 +216,7 @@
               },
               {
                 "fileType" : "sourcecode.swift",
-                "guid" : "PACKAGE:wordshelf::MAINGROUP::REF_2::REF_1",
+                "guid" : "PACKAGE:wordshelf::MAINGROUP::REF_2::REF_2",
                 "name" : "RateLimitTests.swift",
                 "path" : "RateLimitTests.swift",
                 "sourceTree" : "<group>",
@@ -216,7 +224,7 @@
               },
               {
                 "fileType" : "sourcecode.swift",
-                "guid" : "PACKAGE:wordshelf::MAINGROUP::REF_2::REF_2",
+                "guid" : "PACKAGE:wordshelf::MAINGROUP::REF_2::REF_3",
                 "name" : "StoreTests.swift",
                 "path" : "StoreTests.swift",
                 "sourceTree" : "<group>",
@@ -396,7 +404,7 @@
       "projectIsPackage" : "true",
       "projectName" : "WordShelf",
       "targets" : [
-        "869339ca76fdfcd960d7ea90940f6ddcfb1b960f9a330745a14040002527bdbd",
+        "9c8cadf894d864c5912e6845b650892873e492bf368878a98539a0d9f69eb263",
         "fc85e2b1a1de3acf4daf813ad758d995e23c32dfdb1d69732f485ad1743625d0",
         "2efb9012e94fd1769446b47d6266fdf2f71d7ac0f94959bf6a69419fcfa9ca24",
         "16437fc80ec7db0f61833bbf35b05978f8c2c5c4c7a3faf4328e9d989f2ce3ec",
@@ -405,7 +413,7 @@
         "2b21724e9bf8650cbc6b44fc6941b3eb0d7cad8fe1fe849a7eca5cdea96f2d2c"
       ]
     },
-    "signature" : "1213df37b29ca82c2c42a1b4d51926c2b4b00a8b09d3947030a56f96fc2450ac",
+    "signature" : "dd6c5720f688c55dbc3d04f4c3cee408383f9724201bcc2fbcb993ccf03a76b6",
     "type" : "project"
   },
   {
@@ -606,6 +614,15 @@
 
               ],
               "removeHeadersOnCopy" : "false"
+            },
+            {
+              "codeSignOnCopy" : "false",
+              "fileReference" : "PACKAGE:wordshelf::MAINGROUP::REF_2::REF_3",
+              "guid" : "PACKAGE-PRODUCT:wordshelf_WordShelfTests.WordShelfTests::BUILDPHASE_0::3",
+              "platformFilters" : [
+
+              ],
+              "removeHeadersOnCopy" : "false"
             }
           ],
           "guid" : "PACKAGE-PRODUCT:wordshelf_WordShelfTests.WordShelfTests::BUILDPHASE_0",
@@ -661,7 +678,7 @@
       "productTypeIdentifier" : "com.apple.product-type.bundle.unit-test",
       "type" : "standard"
     },
-    "signature" : "869339ca76fdfcd960d7ea90940f6ddcfb1b960f9a330745a14040002527bdbd",
+    "signature" : "9c8cadf894d864c5912e6845b650892873e492bf368878a98539a0d9f69eb263",
     "type" : "target"
   },
   {
